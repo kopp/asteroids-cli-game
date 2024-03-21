@@ -1,3 +1,5 @@
+mod backtracking;
+
 use crossterm::{
     event::{read, Event, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode},
