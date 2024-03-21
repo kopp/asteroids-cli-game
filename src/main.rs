@@ -1,3 +1,7 @@
+use crossterm::{
+    event::{read, Event, KeyCode},
+    terminal::{disable_raw_mode, enable_raw_mode},
+};
 use std::fmt;
 use std::fmt::Display;
 
@@ -48,7 +52,11 @@ impl Shape {
             Shape::Free => vec![],
             Shape::M1 => vec![Point { x: 0, y: 0 }],
             Shape::M2 => vec![Point { x: 0, y: 0 }, Point { x: 1, y: 1 }],
-            Shape::M3 => vec![Point { x: 0, y: 0 }, Point { x: 1, y: 1 }, Point { x: 1, y: 0}],
+            Shape::M3 => vec![
+                Point { x: 0, y: 0 },
+                Point { x: 1, y: 1 },
+                Point { x: 1, y: 0 },
+            ],
             Shape::Ship => vec![
                 Point { x: 0, y: 0 },
                 Point { x: 1, y: 0 },
@@ -183,15 +191,14 @@ fn drawing_character_for(shape: &Shape) -> &str {
 fn drawing_points_for(shape: &Shape) -> Vec<Point> {
     match shape {
         Shape::Free => vec![
-                Point { x: 0, y: 0 },
-                Point { x: 1, y: 0 },
-                Point { x: 0, y: 1 },
-                Point { x: 1, y: 1 },
-            ],
-            _ => shape.get_points(),
+            Point { x: 0, y: 0 },
+            Point { x: 1, y: 0 },
+            Point { x: 0, y: 1 },
+            Point { x: 1, y: 1 },
+        ],
+        _ => shape.get_points(),
     }
 }
-
 
 impl Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -225,31 +232,54 @@ impl Display for Board {
     }
 }
 
-fn main() {
+fn main() -> crossterm::Result<()> {
     let board = Board {
-            shapes: [
-                Shape::Free,
-                Shape::M1,
-                Shape::M2,
-                Shape::M3,
-                Shape::M1,
-                Shape::M1,
-                Shape::Ship,
-                Shape::M1,
-                Shape::M1,
-            ],
+        shapes: [
+            Shape::Free,
+            Shape::M1,
+            Shape::M2,
+            Shape::M3,
+            Shape::M1,
+            Shape::M1,
+            Shape::Ship,
+            Shape::M1,
+            Shape::M1,
+        ],
     };
-
-    assert!(board.is_valid());
 
     println!("{}", board);
 
-    let moved = board.move_free_space(&Direction::Right).unwrap();
-    println!("{}", moved);
-    let moved = moved.move_free_space(&Direction::Right).unwrap();
-    println!("{}", moved);
-    let moved = moved.move_free_space(&Direction::Down).unwrap();
-    println!("{}", moved);
+    let mut history = vec![board];
 
+    loop {
+        println!(
+            "Move {}; use arrow keys to move the 'free' space, or 'q' to quit.",
+            history.len() - 1
+        );
+        enable_raw_mode()?; // raw mode to get individual key strokes
+        let keyboard_input = read()?;
+        disable_raw_mode()?;
+        if let Event::Key(event) = keyboard_input {
+            let direction = match event.code {
+                KeyCode::Up => Some(Direction::Up),
+                KeyCode::Down => Some(Direction::Down),
+                KeyCode::Left => Some(Direction::Left),
+                KeyCode::Right => Some(Direction::Right),
+                KeyCode::Char('q') => break,
+                _ => None,
+            };
 
+            if let Some(direction) = direction {
+                if let Some(new_board) = history.last().unwrap().move_free_space(&direction) {
+                    println!("{}", &new_board);
+                    history.push(new_board);
+                } else {
+                    println!("invalid move.")
+                }
+            } else {
+                println!("Use the arrow keys to move the 'free' space.");
+            }
+        }
+    }
+    Ok(())
 }
