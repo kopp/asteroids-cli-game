@@ -119,6 +119,17 @@ enum Direction {
     Right,
 }
 
+impl Direction {
+    fn opposite(&self) -> Direction {
+        match self {
+            Direction::Up => Direction::Down,
+            Direction::Down => Direction::Up,
+            Direction::Left => Direction::Right,
+            Direction::Right => Direction::Left,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Hash, Eq)]
 struct BoardIndex2d {
     x: i32,
@@ -373,12 +384,33 @@ impl Board {
     }
 
     /// Move the free space in the given direction iff it is possible (i.e. a valid move).
-    fn move_free_space(&self, direction: &Direction) -> Option<Board> {
+    fn move_free_space(&self, space_moves_in_direction: &Direction) -> Option<Board> {
         let free_space_position = self.find_free_space();
-        if let Some(neighbor) = free_space_position.neighbor(direction) {
+        if let Some(neighbor_position) = free_space_position.neighbor(space_moves_in_direction) {
+            let neighbor_moves_in_direction = space_moves_in_direction.opposite();
+
+            // check collission for move and final position
+            let collission_free = match neighbor_moves_in_direction {
+                Direction::Up => [(0, -1), (0, -2)],
+                Direction::Down => [(0, 1), (0, 2)],
+                Direction::Left => [(-1, 0), (-2, 0)],
+                Direction::Right => [(1, 0), (2, 0)],
+            }
+            .map(|(dx, dy)| MovingTile {
+                board_index: neighbor_position,
+                grid_dx: dx,
+                grid_dy: dy,
+            })
+            .iter()
+            .all(|moving_tile| self.is_collission_free(&moving_tile));
+            if !collission_free {
+                return None;
+            }
+
+            // collission free, hence construct the new situation
             let mut new_shapes = self.shapes.clone();
             let free_space_index = free_space_position.to_index();
-            let neighbor_index = neighbor.to_index();
+            let neighbor_index = neighbor_position.to_index();
             new_shapes.swap(free_space_index as usize, neighbor_index as usize);
             Some(Board { shapes: new_shapes })
         } else {
@@ -386,6 +418,11 @@ impl Board {
         }
     }
 
+    /// Check if the constellation on the board is collission free given the
+    /// move indicated by `moving_tile`. The `moving_tile` allows to specify a
+    /// direction in grid coordinates, hence it is possible to check a
+    /// collission for an intermediate state, i.e. _during_ movement.
+    /// Note: The moving tile pertains the actual tile, not the free space.
     fn is_collission_free(&self, moving_tile: &MovingTile) -> bool {
         let mut occupied_points: Vec<Point> = vec![];
         for y in 0..3 {
@@ -406,12 +443,63 @@ mod test3 {
     use super::*;
 
     #[test]
-    fn test_is_collission_free() {
+    fn test_is_collission_free_1() {
         let mut board = super::Board::empty_board();
         board.shapes[0] = Shape::Ship;
         board.shapes[1] = Shape::Ship;
 
         assert!(!board.is_collission_free(&MovingTile::no_move()));
+    }
+
+    #[test]
+    fn test_is_collission_free_2() {
+        let mut board = super::Board::empty_board();
+        board.shapes[6] = Shape::Ship;
+        board.shapes[7] = Shape::M3;
+        println!("{board}");
+
+        assert!(!board.is_collission_free(&MovingTile::no_move()));
+    }
+
+    #[test]
+    fn test_is_collission_free_3() {
+        let mut board = super::Board::empty_board();
+        board.shapes[6] = Shape::Ship;
+        board.shapes[1] = Shape::Ship;
+        println!("{board}");
+
+        assert!(
+            board.is_collission_free(&MovingTile {
+                board_index: BoardIndex2d::from_index(1),
+                grid_dx: 0,
+                grid_dy: 0
+            }),
+            "before move",
+        );
+        assert!(
+            board.is_collission_free(&MovingTile {
+                board_index: BoardIndex2d::from_index(1),
+                grid_dx: 0,
+                grid_dy: 1
+            }),
+            "move 1"
+        );
+        assert!(
+            board.is_collission_free(&MovingTile {
+                board_index: BoardIndex2d::from_index(1),
+                grid_dx: 0,
+                grid_dy: 2
+            }),
+            "move 2"
+        );
+        assert!(
+            !board.is_collission_free(&MovingTile {
+                board_index: BoardIndex2d::from_index(1),
+                grid_dx: 0,
+                grid_dy: 3
+            }),
+            "move 3 -- now we have a collission"
+        );
     }
 }
 
