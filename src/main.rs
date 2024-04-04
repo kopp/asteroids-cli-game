@@ -8,13 +8,128 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Display;
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 enum Shape {
     Free,
     M1,
     M2,
     M3,
     Ship,
+
+    // actual ones
+    /// Xo
+    /// oo
+    OneTL,
+    /// oX
+    /// oo
+    OneTR,
+    /// oo
+    /// Xo
+    OneBL,
+    /// oo
+    /// oX
+    OneBR,
+    /// Xo
+    /// oX
+    TwoDiagDown,
+    /// oX
+    /// Xo
+    TwoDiagUp,
+    /// XX
+    /// oo
+    TwoHorT,
+    /// Xo
+    /// Xo
+    TwoHorL,
+    /// oo
+    /// XX
+    TwoHorB,
+    /// oX
+    /// oX
+    TwoHorR,
+    /// yy (above actual tile)
+    /// XX
+    /// oo
+    LargeEdgeT,
+    /// v   (left of actual tile)
+    /// yXo
+    /// yXo
+    LargeEdgeL,
+    /// oo
+    /// XX
+    /// yy (below actual tile)
+    LargeEdgeB,
+    /// oXy
+    /// oXy
+    LargeEdgeR,
+    /// yy
+    /// yXo
+    ///  oo
+    LargeCornerTL,
+    ///  yy
+    /// oXy
+    /// oo
+    LargeCornerTR,
+    ///  oo
+    /// yXo
+    /// yy
+    LargeCornerBL,
+    /// oo
+    /// oXy
+    /// oyy
+    LargeCornerBR,
+}
+
+impl Shape {
+    fn rotate(&self, clockwise: bool) -> Shape {
+        match self {
+            Shape::Free => Shape::Free,
+            Shape::Ship => Shape::Ship, // cannot rotate
+            Shape::OneTL => {
+                if clockwise {
+                    Shape::OneTR
+                } else {
+                    Shape::OneBL
+                }
+            }
+            Shape::OneTR => {
+                if clockwise {
+                    Shape::OneBR
+                } else {
+                    Shape::OneTL
+                }
+            }
+            Shape::OneBL => {
+                if clockwise {
+                    Shape::OneTL
+                } else {
+                    Shape::OneBR
+                }
+            }
+            Shape::OneBR => {
+                if clockwise {
+                    Shape::OneBL
+                } else {
+                    Shape::OneTR
+                }
+            }
+            Shape::TwoDiagDown => Shape::TwoDiagDown,
+            Shape::TwoDiagUp => Shape::TwoDiagUp,
+            Shape::TwoHorT => Shape::TwoHorT,
+            Shape::TwoHorL => Shape::TwoHorL,
+            Shape::TwoHorB => Shape::TwoHorB,
+            Shape::TwoHorR => Shape::TwoHorR,
+            Shape::LargeEdgeT => Shape::LargeEdgeT,
+            Shape::LargeEdgeL => Shape::LargeEdgeL,
+            Shape::LargeEdgeB => Shape::LargeEdgeB,
+            Shape::LargeEdgeR => Shape::LargeEdgeR,
+            Shape::LargeCornerTL => Shape::LargeCornerTL,
+            Shape::LargeCornerTR => Shape::LargeCornerTR,
+            Shape::LargeCornerBL => Shape::LargeCornerBL,
+            Shape::LargeCornerBR => Shape::LargeCornerBR,
+            _ => Shape::Free, // TODO: remove
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Hash, Eq)]
@@ -373,6 +488,20 @@ impl Board {
         free_count == 1 && self.is_collission_free(&MovingTile::no_move())
     }
 
+    fn is_won(&self) -> bool {
+        let in_front_of_exit = BoardIndex2d { x: 1, y: 2 };
+        if self.shapes[in_front_of_exit.to_index()] != Shape::Ship {
+            return false;
+        } else {
+            let leave_board = MovingTile {
+                board_index: in_front_of_exit,
+                grid_dx: 0,
+                grid_dy: 1,
+            };
+            self.is_collission_free(&leave_board)
+        }
+    }
+
     fn find_free_space(&self) -> BoardIndex2d {
         for (i, shape) in self.shapes.iter().enumerate() {
             if let Shape::Free = shape {
@@ -601,6 +730,9 @@ fn main() -> crossterm::Result<()> {
             if let Some(direction) = direction {
                 if let Some(new_board) = history.last().unwrap().move_free_space(&direction) {
                     println!("{}", &new_board);
+                    if new_board.is_won() {
+                        println!("You won!");
+                    }
                     history.push(new_board);
                 } else {
                     println!("invalid move.")

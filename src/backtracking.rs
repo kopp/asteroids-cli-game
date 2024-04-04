@@ -1,7 +1,7 @@
 // backpropagation library ----------------------------------------------------
 
-use std::{collections::HashSet, hash::Hash};
 use itertools::Itertools;
+use std::{collections::HashSet, hash::Hash};
 
 trait State: ToString + Eq + Hash {
     fn is_final(&self) -> bool;
@@ -54,11 +54,15 @@ fn get_sequence_to_final_state<AState: State + Clone>(
 
                 if attempts
                     .iter()
-                    .any(|old_attempt| &(old_attempt.state) == successor.as_ref()) || dead_ends.contains(successor.as_ref())
+                    .any(|old_attempt| &(old_attempt.state) == successor.as_ref())
+                    || dead_ends.contains(successor.as_ref())
                 {
                     // this has already been tested, so no need to re-try
                     if *verbosity == Verbosity::Trace {
-                        println!("{} has been tried before, not considering it.", successor.as_ref().to_string());
+                        println!(
+                            "{} has been tried before, not considering it.",
+                            successor.as_ref().to_string()
+                        );
                     }
                 } else {
                     attempts.push(Attempt {
@@ -74,11 +78,12 @@ fn get_sequence_to_final_state<AState: State + Clone>(
                     }
                     dead_ends.insert(attempt.state);
                     if *verbosity == Verbosity::Trace {
-                        println!("  Known dead ends: {:?}", dead_ends.iter().map(|s| s.to_string()).format(", "));
+                        println!(
+                            "  Known dead ends: {:?}",
+                            dead_ends.iter().map(|s| s.to_string()).format(", ")
+                        );
                     }
-
-                }
-                else {
+                } else {
                     assert!(false); // attempts must not have been empty
                 }
             }
@@ -209,13 +214,23 @@ enum Piece {
     LargeEdgeB,
     LargeEdgeR,
     LargeCornerTL,
-    LargeCornerTT,
+    LargeCornerTR,
     LargeCornerBL,
     LargeCornerBR,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash)]
-struct AsteroidsState(Piece, Piece,  Piece,  Piece,  Piece,  Piece,  Piece,  Piece,  Piece, );
+struct AsteroidsState(
+    Piece,
+    Piece,
+    Piece,
+    Piece,
+    Piece,
+    Piece,
+    Piece,
+    Piece,
+    Piece,
+);
 
 fn main() {
     demo_example_1(&Verbosity::Trace);
