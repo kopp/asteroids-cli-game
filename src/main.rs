@@ -10,73 +10,111 @@ use std::fmt::Display;
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 enum Shape {
+    /// ```
+    /// oo
+    /// oo
+    /// ```
     Free,
-    M1,
-    M2,
-    M3,
+    /// ```
+    /// yXXy
+    ///  XX
+    /// ```
     Ship,
-
-    // actual ones
+    /// ```
     /// Xo
     /// oo
+    /// ```
     OneTL,
+    /// ```
     /// oX
     /// oo
+    /// ```
     OneTR,
+    /// ```
     /// oo
     /// Xo
+    /// ```
     OneBL,
+    /// ```
     /// oo
     /// oX
+    /// ```
     OneBR,
+    /// ```
     /// Xo
     /// oX
+    /// ```
     TwoDiagDown,
+    /// ```
     /// oX
     /// Xo
+    /// ```
     TwoDiagUp,
+    /// ```
     /// XX
     /// oo
+    /// ```
     TwoHorT,
+    /// ```
     /// Xo
     /// Xo
+    /// ```
     TwoHorL,
+    /// ```
     /// oo
     /// XX
+    /// ```
     TwoHorB,
+    /// ```
     /// oX
     /// oX
+    /// ```
     TwoHorR,
-    /// yy (above actual tile)
+    /// ```
+    /// yy
     /// XX
     /// oo
+    /// ```
     LargeEdgeT,
-    /// v   (left of actual tile)
+    /// ```
     /// yXo
     /// yXo
+    /// ```
     LargeEdgeL,
+    /// ```
     /// oo
     /// XX
-    /// yy (below actual tile)
+    /// yy
+    /// ```
     LargeEdgeB,
+    /// ```
     /// oXy
     /// oXy
+    /// ```
     LargeEdgeR,
+    /// ```
     /// yy
     /// yXo
     ///  oo
+    /// ```
     LargeCornerTL,
+    /// ```
     ///  yy
     /// oXy
     /// oo
+    /// ```
     LargeCornerTR,
+    /// ```
     ///  oo
     /// yXo
     /// yy
+    /// ```
     LargeCornerBL,
+    /// ```
     /// oo
     /// oXy
     /// oyy
+    /// ```
     LargeCornerBR,
 }
 
@@ -113,21 +151,92 @@ impl Shape {
                     Shape::OneTR
                 }
             }
-            Shape::TwoDiagDown => Shape::TwoDiagDown,
-            Shape::TwoDiagUp => Shape::TwoDiagUp,
-            Shape::TwoHorT => Shape::TwoHorT,
-            Shape::TwoHorL => Shape::TwoHorL,
-            Shape::TwoHorB => Shape::TwoHorB,
-            Shape::TwoHorR => Shape::TwoHorR,
-            Shape::LargeEdgeT => Shape::LargeEdgeT,
-            Shape::LargeEdgeL => Shape::LargeEdgeL,
-            Shape::LargeEdgeB => Shape::LargeEdgeB,
-            Shape::LargeEdgeR => Shape::LargeEdgeR,
-            Shape::LargeCornerTL => Shape::LargeCornerTL,
-            Shape::LargeCornerTR => Shape::LargeCornerTR,
-            Shape::LargeCornerBL => Shape::LargeCornerBL,
-            Shape::LargeCornerBR => Shape::LargeCornerBR,
-            _ => Shape::Free, // TODO: remove
+            Shape::TwoDiagDown => Shape::TwoDiagUp,
+            Shape::TwoDiagUp => Shape::TwoDiagDown,
+            Shape::TwoHorT => {
+                if clockwise {
+                    Shape::TwoHorR
+                } else {
+                    Shape::TwoHorL
+                }
+            }
+            Shape::TwoHorL => {
+                if clockwise {
+                    Shape::TwoHorT
+                } else {
+                    Shape::TwoHorB
+                }
+            }
+            Shape::TwoHorB => {
+                if clockwise {
+                    Shape::TwoHorL
+                } else {
+                    Shape::TwoHorR
+                }
+            }
+            Shape::TwoHorR => {
+                if clockwise {
+                    Shape::TwoHorB
+                } else {
+                    Shape::TwoHorT
+                }
+            }
+            Shape::LargeEdgeT => {
+                if clockwise {
+                    Shape::LargeEdgeR
+                } else {
+                    Shape::LargeEdgeL
+                }
+            }
+            Shape::LargeEdgeL => {
+                if clockwise {
+                    Shape::LargeEdgeT
+                } else {
+                    Shape::LargeEdgeB
+                }
+            }
+            Shape::LargeEdgeB => {
+                if clockwise {
+                    Shape::LargeEdgeL
+                } else {
+                    Shape::LargeEdgeR
+                }
+            }
+            Shape::LargeEdgeR => {
+                if clockwise {
+                    Shape::LargeEdgeB
+                } else {
+                    Shape::LargeEdgeT
+                }
+            }
+            Shape::LargeCornerTL => {
+                if clockwise {
+                    Shape::LargeCornerTR
+                } else {
+                    Shape::LargeCornerBL
+                }
+            }
+            Shape::LargeCornerTR => {
+                if clockwise {
+                    Shape::LargeCornerBR
+                } else {
+                    Shape::LargeCornerTL
+                }
+            }
+            Shape::LargeCornerBL => {
+                if clockwise {
+                    Shape::LargeCornerTL
+                } else {
+                    Shape::LargeCornerBR
+                }
+            }
+            Shape::LargeCornerBR => {
+                if clockwise {
+                    Shape::LargeCornerBL
+                } else {
+                    Shape::LargeCornerTR
+                }
+            }
         }
     }
 }
@@ -171,6 +280,34 @@ mod test4 {
         assert_ne!(get_hash(&point1), get_hash(&point3));
         assert_eq!(point1 == point3, false);
     }
+
+    #[test]
+    fn test_shape_rotation() {
+        for shape in [
+            Shape::Free,
+            Shape::Ship,
+            Shape::OneTL,
+            Shape::OneTR,
+            Shape::OneBL,
+            Shape::OneBR,
+            Shape::TwoDiagDown,
+            Shape::TwoDiagUp,
+            Shape::TwoHorT,
+            Shape::TwoHorL,
+            Shape::TwoHorB,
+            Shape::TwoHorR,
+            Shape::LargeEdgeT,
+            Shape::LargeEdgeL,
+            Shape::LargeEdgeB,
+            Shape::LargeEdgeR,
+            Shape::LargeCornerTL,
+            Shape::LargeCornerTR,
+            Shape::LargeCornerBL,
+            Shape::LargeCornerBR,
+        ] {
+            assert_eq!(shape, shape.rotate(true).rotate(false));
+        }
+    }
 }
 
 // Central square is an actual 2x2 square.
@@ -204,13 +341,6 @@ impl Shape {
     fn get_points(&self) -> Vec<Point> {
         match self {
             Shape::Free => vec![],
-            Shape::M1 => vec![Point { x: 1, y: 0 }],
-            Shape::M2 => vec![Point { x: 0, y: 0 }, Point { x: 1, y: 1 }],
-            Shape::M3 => vec![
-                Point { x: 0, y: 0 },
-                Point { x: 1, y: 1 },
-                Point { x: 1, y: 0 },
-            ],
             Shape::Ship => vec![
                 Point { x: 0, y: 0 },
                 Point { x: 1, y: 0 },
@@ -218,6 +348,64 @@ impl Shape {
                 Point { x: 1, y: 1 },
                 Point { x: 2, y: 0 },
                 Point { x: -1, y: 0 },
+            ],
+            Shape::OneTL => vec![Point { x: 0, y: 0 }],
+            Shape::OneTR => vec![Point { x: 1, y: 0 }],
+            Shape::OneBL => vec![Point { x: 0, y: 1 }],
+            Shape::OneBR => vec![Point { x: 1, y: 1 }],
+            Shape::TwoDiagDown => vec![Point { x: 0, y: 0 }, Point { x: 1, y: 1 }],
+            Shape::TwoDiagUp => vec![Point { x: 0, y: 1 }, Point { x: 1, y: 0 }],
+            Shape::TwoHorT => vec![Point { x: 0, y: 0 }, Point { x: 1, y: 0 }],
+            Shape::TwoHorL => vec![Point { x: 0, y: 0 }, Point { x: 0, y: 1 }],
+            Shape::TwoHorB => vec![Point { x: 0, y: 1 }, Point { x: 1, y: 1 }],
+            Shape::TwoHorR => vec![Point { x: 1, y: 0 }, Point { x: 1, y: 1 }],
+            Shape::LargeEdgeT => vec![
+                Point { x: 0, y: -1 },
+                Point { x: 1, y: -1 },
+                Point { x: 0, y: 0 },
+                Point { x: 1, y: 0 },
+            ],
+            Shape::LargeEdgeL => vec![
+                Point { x: -1, y: 0 },
+                Point { x: 0, y: 0 },
+                Point { x: -1, y: 1 },
+                Point { x: 0, y: 1 },
+            ],
+            Shape::LargeEdgeB => vec![
+                Point { x: 0, y: 1 },
+                Point { x: 1, y: 1 },
+                Point { x: 0, y: 2 },
+                Point { x: 1, y: 2 },
+            ],
+            Shape::LargeEdgeR => vec![
+                Point { x: 1, y: 0 },
+                Point { x: 2, y: 0 },
+                Point { x: 1, y: 1 },
+                Point { x: 2, y: 1 },
+            ],
+            Shape::LargeCornerTL => vec![
+                Point { x: -1, y: -1 },
+                Point { x: 0, y: -1 },
+                Point { x: -1, y: 0 },
+                Point { x: 0, y: 0 },
+            ],
+            Shape::LargeCornerTR => vec![
+                Point { x: 1, y: -1 },
+                Point { x: 2, y: -1 },
+                Point { x: 1, y: 0 },
+                Point { x: 2, y: 0 },
+            ],
+            Shape::LargeCornerBL => vec![
+                Point { x: -1, y: 1 },
+                Point { x: 0, y: 1 },
+                Point { x: -1, y: 2 },
+                Point { x: 0, y: 2 },
+            ],
+            Shape::LargeCornerBR => vec![
+                Point { x: 1, y: 1 },
+                Point { x: 2, y: 1 },
+                Point { x: 1, y: 2 },
+                Point { x: 2, y: 2 },
             ],
         }
     }
@@ -395,7 +583,7 @@ mod tests2 {
     fn test_map_shape_points_to_grid_points() {
         let mut board = Board::empty_board();
         let top_left = BoardIndex2d { x: 0, y: 0 };
-        let shape = Shape::M1;
+        let shape = Shape::OneTR;
         board.shapes[top_left.to_index()] = shape.clone();
         let local_points = shape.get_points();
 
@@ -584,7 +772,7 @@ mod test3 {
     fn test_is_collission_free_2() {
         let mut board = super::Board::empty_board();
         board.shapes[6] = Shape::Ship;
-        board.shapes[7] = Shape::M3;
+        board.shapes[7] = Shape::TwoDiagDown;
         println!("{board}");
 
         assert!(!board.is_collission_free(&MovingTile::no_move()));
@@ -636,11 +824,16 @@ mod test3 {
 
 fn drawing_character_for(shape: &Shape) -> &str {
     match shape {
-        Shape::M1 => "x",
-        Shape::M2 => "X",
-        Shape::M3 => "Y",
         Shape::Free => "o",
         Shape::Ship => "V",
+        Shape::OneTL | Shape::OneTR | Shape::OneBL | Shape::OneBR => "x",
+        Shape::TwoDiagDown | Shape::TwoDiagUp => "+",
+        Shape::TwoHorT | Shape::TwoHorL | Shape::TwoHorB | Shape::TwoHorR => "|",
+        Shape::LargeEdgeL | Shape::LargeEdgeR | Shape::LargeEdgeT | Shape::LargeEdgeB => "#",
+        Shape::LargeCornerBL
+        | Shape::LargeCornerBR
+        | Shape::LargeCornerTL
+        | Shape::LargeCornerTR => "%",
     }
 }
 
@@ -688,24 +881,12 @@ impl Display for Board {
     }
 }
 
-fn main() -> crossterm::Result<()> {
-    let board = Board {
-        shapes: [
-            Shape::Free,
-            Shape::M1,
-            Shape::M2,
-            Shape::M3,
-            Shape::M1,
-            Shape::M1,
-            Shape::Ship,
-            Shape::M1,
-            Shape::M1,
-        ],
-    };
-
-    println!("{}", board);
-
-    println!("Is valid: {}", board.is_valid());
+/// Play the game via text user interface.
+fn play_game_via_tui(board: Board) -> crossterm::Result<Vec<Board>> {
+    assert!(
+        board.is_valid(),
+        "Unable to play since board setup is invalid."
+    );
 
     let mut history = vec![board];
 
@@ -742,5 +923,34 @@ fn main() -> crossterm::Result<()> {
             }
         }
     }
+    Ok(history)
+}
+
+/// Create a board by asking the user to place the shapes.
+fn make_board_via_tui() -> Board {
+    let mut board = Board::empty_board();
+    println!("Use left/right to rotate the shape and up/down to select a different shape.");
+}
+
+fn main() -> crossterm::Result<()> {
+    let board = Board {
+        shapes: [
+            Shape::Free,
+            Shape::OneTR,
+            Shape::TwoDiagDown,
+            Shape::OneTR,
+            Shape::OneTR,
+            Shape::OneTR,
+            Shape::Ship,
+            Shape::OneTR,
+            Shape::OneTR,
+        ],
+    };
+
+    println!("{}", board);
+
+    println!("Is valid: {}", board.is_valid());
+
+    play_game_via_tui(board)?;
     Ok(())
 }
