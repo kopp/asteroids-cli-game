@@ -662,6 +662,12 @@ impl Board {
         }
     }
 
+    fn set_shape(&self, board_index: &BoardIndex2d, shape: &Shape) -> Board {
+        let mut new_shapes = self.shapes.clone();
+        new_shapes[board_index.to_index()] = shape.clone();
+        Board { shapes: new_shapes }
+    }
+
     fn is_valid(&self) -> bool {
         // has exactly one free space
         let mut free_count = 0;
@@ -887,6 +893,10 @@ fn play_game_via_tui(board: Board) -> crossterm::Result<Vec<Board>> {
         board.is_valid(),
         "Unable to play since board setup is invalid."
     );
+    assert!(
+        !board.is_won(),
+        "Unable to play since board setup is already won."
+    );
 
     let mut history = vec![board];
 
@@ -926,27 +936,95 @@ fn play_game_via_tui(board: Board) -> crossterm::Result<Vec<Board>> {
     Ok(history)
 }
 
+/// Return the ``modulo`` of ``value`` and make sure that it is always positive.
+fn positive_modulo(value: i32, modulo: i32) -> i32 {
+    ((value % modulo) + modulo) % modulo
+}
+
 /// Create a board by asking the user to place the shapes.
 fn make_board_via_tui() -> Board {
     let mut board = Board::empty_board();
-    println!("Use left/right to rotate the shape and up/down to select a different shape.");
+    let mut shapes_to_place = vec![
+        Shape::OneTL,
+        Shape::TwoDiagUp,
+        Shape::TwoHorT,
+        Shape::OneTL,
+        Shape::LargeEdgeT,
+        Shape::LargeCornerTL,
+        Shape::OneTL,
+        Shape::Ship,
+        Shape::Free,
+    ];
+    assert!(shapes_to_place.len() == 9);
+
+    let mut board_index = 0 as usize;
+    let mut shape_to_allocate_index = 0;
+    let mut clockwise_rotations = 0 as i32;
+
+    loop {
+        let board_index_2d = BoardIndex2d::from_index(board_index);
+        assert!(shapes_to_place.len() > 0);
+        let mut shape = shapes_to_place[shape_to_allocate_index];
+        assert!(clockwise_rotations >= 0 && clockwise_rotations < 4);
+        for _ in 0..clockwise_rotations {
+            shape = shape.rotate(true);
+        }
+        board = board.set_shape(&board_index_2d, &shape);
+        println!("{}", board);
+        println!("Use left/right to rotate the shape, up/down to select a different shape, Enter to confirm the shape, q to quit.");
+
+        enable_raw_mode().unwrap(); // raw mode to get individual key strokes
+        let keyboard_input = read().unwrap();
+        disable_raw_mode().unwrap();
+
+        if let Event::Key(event) = keyboard_input {
+            match event.code {
+                KeyCode::Down => {
+                    shape_to_allocate_index += 1;
+                    if shape_to_allocate_index >= shapes_to_place.len() {
+                        shape_to_allocate_index = 0;
+                    }
+                }
+                KeyCode::Up => {
+                    if shape_to_allocate_index == 0 {
+                        shape_to_allocate_index = shapes_to_place.len() - 1;
+                    } else {
+                        shape_to_allocate_index -= 1;
+                    }
+                }
+                KeyCode::Left => {
+                    clockwise_rotations -= 1;
+                    clockwise_rotations = positive_modulo(clockwise_rotations, 4);
+                }
+                KeyCode::Right => {
+                    clockwise_rotations += 1;
+                    clockwise_rotations = positive_modulo(clockwise_rotations, 4);
+                }
+
+                KeyCode::Enter => {
+                    if !board.is_collission_free(&MovingTile::no_move()) {
+                        println!("Invalid placement; there is a collission.");
+                        continue;
+                    }
+                    clockwise_rotations = 0;
+                    shapes_to_place.remove(shape_to_allocate_index);
+                    shape_to_allocate_index = 0;
+                    board_index += 1;
+                    if board_index >= 9 {
+                        return board;
+                    }
+                }
+                KeyCode::Char('q') => {
+                    panic!("User aborted; unable to construct board.");
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 fn main() -> crossterm::Result<()> {
-    let board = Board {
-        shapes: [
-            Shape::Free,
-            Shape::OneTR,
-            Shape::TwoDiagDown,
-            Shape::OneTR,
-            Shape::OneTR,
-            Shape::OneTR,
-            Shape::Ship,
-            Shape::OneTR,
-            Shape::OneTR,
-        ],
-    };
-
+    let board = make_board_via_tui();
     println!("{}", board);
 
     println!("Is valid: {}", board.is_valid());
